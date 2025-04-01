@@ -1,0 +1,48 @@
+package:
+  name: protect-webhook
+  version: 0.1.3
+  epoch: 0
+  description: "A kubernetes runtime class mutating webhook"
+  copyright:
+    - license: Apache-2.0
+
+environment:
+  contents:
+    packages:
+      - build-base
+      - busybox
+      - ca-certificates-bundle
+      - cargo-auditable
+      - rust
+      - zlib-dev
+
+pipeline:
+  - uses: git-checkout
+    with:
+      repository: https://github.com/edera-dev/protect-webhook
+      tag: v${{package.version}}
+      expected-commit: c76704c3490baf43e415fe66f8ba5d9f199a31ea
+
+  - uses: rust/cargobump
+
+  - runs: |
+      cargo fetch
+      cargo auditable build --frozen --release
+
+  - runs: |
+      install -Dm755 target/release/${package.name} "${{targets.destdir}}"/usr/bin/${package.name}
+
+  - uses: strip
+
+subpackages:
+  - name: ${{package.name}}-doc
+    pipeline:
+      - uses: split/manpages
+      - uses: split/infodir
+    description: ${{package.name}} manpages
+
+update:
+  enabled: true
+  github:
+    identifier: edera-dev/${package.name}
+    strip-prefix: v
